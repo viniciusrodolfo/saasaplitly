@@ -78,6 +78,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Test database connection
+  app.get("/api/test-db", async (req, res) => {
+    try {
+      await storage.ensureDbInitialized();
+      res.json({ status: "Database connection successful" });
+    } catch (error) {
+      console.error("Database test error:", error);
+      res.status(500).json({ status: "Database connection failed", error: String(error) });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -104,6 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: user.name 
       });
     } catch (error) {
+      console.error("Registration error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }

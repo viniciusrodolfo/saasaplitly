@@ -30,12 +30,28 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
-const client = postgres(connectionString);
+// Parse the URL to extract components for better connection handling
+let parsedUrl;
+try {
+  parsedUrl = new URL(connectionString);
+} catch (error) {
+  throw new Error("Invalid DATABASE_URL format");
+}
+
+const client = postgres(connectionString, {
+  ssl: parsedUrl.hostname !== 'localhost' ? { rejectUnauthorized: false } : false,
+  connect_timeout: 60,
+  prepare: false,
+  max: 1, // Limit connections for serverless
+});
 const db = drizzle(client);
 
-// Initialize database tables
+// Initialize database tables (will be called when first needed)
 async function initializeDatabase() {
   try {
+    // Test connection first
+    await client`SELECT 1`;
+    
     // Create tables using raw SQL since drizzle-kit push was timing out
     await client`
       CREATE TABLE IF NOT EXISTS users (
@@ -119,15 +135,27 @@ async function initializeDatabase() {
     `;
 
     console.log("Database tables initialized successfully");
+    return true;
   } catch (error) {
     console.error("Error initializing database:", error);
+    return false;
   }
 }
 
-// Initialize database on startup
-initializeDatabase();
+let dbInitialized = false;
+
+// Helper function to ensure database is initialized before operations
+async function ensureDbInitialized() {
+  if (!dbInitialized) {
+    dbInitialized = await initializeDatabase();
+  }
+  return dbInitialized;
+}
 
 export interface IStorage {
+  // Database initialization
+  ensureDbInitialized(): Promise<boolean>;
+  
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -182,6 +210,9 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Export the ensureDbInitialized function
+  ensureDbInitialized = ensureDbInitialized;
+  
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
     return result[0];
@@ -193,6 +224,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(user: InsertUser): Promise<User> {
+    await ensureDbInitialized();
     const result = await db.insert(users).values(user).returning();
     return result[0];
   }
