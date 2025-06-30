@@ -39,7 +39,16 @@ export default function AvailabilitySection() {
 
   const updateAvailabilityMutation = useMutation({
     mutationFn: async (data: DayAvailability[]) => {
-      const response = await apiRequest('PUT', '/api/availability', data);
+      // Add userId to each availability record
+      const formattedData = data.map(day => ({
+        dayOfWeek: day.dayOfWeek,
+        isEnabled: day.isEnabled,
+        morningStart: day.morningStart || null,
+        morningEnd: day.morningEnd || null,
+        afternoonStart: day.afternoonStart || null,
+        afternoonEnd: day.afternoonEnd || null,
+      }));
+      const response = await apiRequest('PUT', '/api/availability', formattedData);
       return response.json();
     },
     onSuccess: () => {
@@ -59,7 +68,7 @@ export default function AvailabilitySection() {
   });
 
   useEffect(() => {
-    if (existingAvailability && existingAvailability.length > 0) {
+    if (existingAvailability && Array.isArray(existingAvailability) && existingAvailability.length > 0) {
       // Create a map of existing availability by day
       const existingMap = new Map();
       existingAvailability.forEach((item: any) => {

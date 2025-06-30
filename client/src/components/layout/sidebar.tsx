@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Section } from '@/pages/dashboard';
@@ -15,27 +16,32 @@ import {
   Moon,
   Sun,
   LogOut,
+  Menu,
+  X,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 
 interface SidebarProps {
   activeSection: Section;
   setActiveSection: (section: Section) => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
 }
 
-const navigation = [
-  { id: 'dashboard' as Section, label: 'Dashboard', icon: BarChart3 },
-  { id: 'calendar' as Section, label: 'Calendar', icon: Calendar },
-  { id: 'clients' as Section, label: 'Clients', icon: Users },
-  { id: 'services' as Section, label: 'Services', icon: Settings },
-  { id: 'availability' as Section, label: 'Availability', icon: Clock },
-  { id: 'booking-form' as Section, label: 'Booking Form', icon: Link },
-  { id: 'analytics' as Section, label: 'Analytics', icon: PieChart },
-];
-
-export default function Sidebar({ activeSection, setActiveSection }: SidebarProps) {
+export default function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCollapsed }: SidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
+
+  const navigationItems = [
+    { id: 'dashboard' as Section, label: t('dashboard'), icon: BarChart3 },
+    { id: 'calendar' as Section, label: t('calendar'), icon: Calendar },
+    { id: 'clients' as Section, label: t('clients'), icon: Users },
+    { id: 'services' as Section, label: t('services'), icon: Settings },
+    { id: 'availability' as Section, label: t('availability'), icon: Clock },
+    { id: 'booking-form' as Section, label: t('bookingForm'), icon: Link },
+    { id: 'analytics' as Section, label: t('analytics'), icon: PieChart },
+  ];
 
   const handleLogout = async () => {
     try {
@@ -46,23 +52,40 @@ export default function Sidebar({ activeSection, setActiveSection }: SidebarProp
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-10 flex flex-col">
-      {/* Logo Section */}
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <CalendarDays className="w-5 h-5 text-primary-foreground" />
+    <div 
+      className={cn(
+        "h-full bg-sidebar border-r border-border flex flex-col transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Header */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className={cn("flex items-center space-x-3", isCollapsed && "justify-center")}>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <CalendarDays className="w-5 h-5 text-primary-foreground" />
+            </div>
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-lg font-bold text-sidebar-foreground">Apptly</h1>
+                <p className="text-xs text-sidebar-foreground/60">{t('appointmentManager')}</p>
+              </div>
+            )}
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-sidebar-foreground">Apptly</h1>
-            <p className="text-xs text-sidebar-foreground/60">Appointment Manager</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1.5 h-auto"
+          >
+            {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
+      <nav className="flex-1 p-2 space-y-1">
+        {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           
@@ -71,26 +94,47 @@ export default function Sidebar({ activeSection, setActiveSection }: SidebarProp
               key={item.id}
               onClick={() => setActiveSection(item.id)}
               className={cn(
-                "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors",
-                isActive
-                  ? "text-sidebar-primary bg-sidebar-accent font-medium"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-colors",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive 
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                  : "text-sidebar-foreground/70",
+                isCollapsed && "justify-center px-2"
               )}
             >
-              <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
+              <Icon className={cn("flex-shrink-0", isCollapsed ? "w-5 h-5" : "w-4 h-4")} />
+              {!isCollapsed && <span className="text-sm">{item.label}</span>}
             </button>
           );
         })}
       </nav>
 
-      {/* User Profile & Settings */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
+      {/* User Profile & Actions */}
+      <div className="p-4 border-t border-border space-y-3">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTheme}
+          className={cn(
+            "w-full flex items-center space-x-3 justify-start",
+            isCollapsed && "justify-center px-2"
+          )}
+        >
+          {theme === 'dark' ? (
+            <Sun className={cn("flex-shrink-0", isCollapsed ? "w-5 h-5" : "w-4 h-4")} />
+          ) : (
+            <Moon className={cn("flex-shrink-0", isCollapsed ? "w-5 h-5" : "w-4 h-4")} />
+          )}
+          {!isCollapsed && <span className="text-sm">{t('toggleTheme')}</span>}
+        </Button>
+
+        {/* User Info */}
+        {!isCollapsed && (
+          <div className="flex items-center space-x-3 px-3 py-2 rounded-lg bg-sidebar-accent/50">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={user?.avatar} />
+              <AvatarFallback className="text-xs">
                 {user?.name ? getInitials(user.name) : 'U'}
               </AvatarFallback>
             </Avatar>
@@ -99,36 +143,26 @@ export default function Sidebar({ activeSection, setActiveSection }: SidebarProp
                 {user?.name || 'User'}
               </p>
               <p className="text-xs text-sidebar-foreground/60 truncate">
-                {user?.businessName || 'Professional'}
+                {user?.businessName || t('professional')}
               </p>
             </div>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
+        )}
+
+        {/* Logout */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          className={cn(
+            "w-full flex items-center space-x-3 justify-start text-destructive hover:text-destructive",
+            isCollapsed && "justify-center px-2"
+          )}
+        >
+          <LogOut className={cn("flex-shrink-0", isCollapsed ? "w-5 h-5" : "w-4 h-4")} />
+          {!isCollapsed && <span className="text-sm">{t('logout')}</span>}
+        </Button>
       </div>
-    </aside>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
+import { cn } from '@/lib/utils';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import DashboardSection from '@/components/sections/dashboard-section';
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed on mobile
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -74,13 +76,44 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {!sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
       
-      <main className="flex-1 ml-64 overflow-auto">
-        <Header title={getSectionTitle(activeSection)} />
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out",
+        sidebarCollapsed 
+          ? "-translate-x-full lg:translate-x-0 lg:w-16" 
+          : "translate-x-0 w-64 lg:w-64"
+      )}>
+        <Sidebar 
+          activeSection={activeSection} 
+          setActiveSection={setActiveSection}
+          isCollapsed={sidebarCollapsed}
+          setIsCollapsed={setSidebarCollapsed}
+        />
+      </div>
+      
+      {/* Main Content */}
+      <main className={cn(
+        "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out",
+        "lg:ml-0", // Remove margin on large screens since sidebar is fixed
+        !sidebarCollapsed && "lg:ml-64", // Add margin when sidebar is expanded on large screens
+        sidebarCollapsed && "lg:ml-16" // Add small margin when sidebar is collapsed on large screens
+      )}>
+        <Header 
+          title={getSectionTitle(activeSection)} 
+          onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          showMenuButton={true}
+        />
         
-        <div className="p-6">
+        <div className="flex-1 overflow-auto p-4 lg:p-6">
           {renderSection()}
         </div>
       </main>
