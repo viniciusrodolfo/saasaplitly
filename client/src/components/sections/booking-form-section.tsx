@@ -5,40 +5,40 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Upload, 
-  Copy, 
-  Save, 
-  Eye,
-  Share2,
-  Facebook,
-  MessageCircle,
-  Twitter
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Share, Save, Facebook, MessageCircle, Copy, Palette, Sun, Moon, Monitor } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { copyToClipboard } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/use-language';
+import { copyToClipboard } from '@/lib/utils';
+
+const colorPresets = [
+  { name: 'Blue', bg: '#6366F1', button: '#10B981' },
+  { name: 'Purple', bg: '#8B5CF6', button: '#F59E0B' },
+  { name: 'Green', bg: '#10B981', button: '#3B82F6' },
+  { name: 'Pink', bg: '#EC4899', button: '#8B5CF6' },
+  { name: 'Orange', bg: '#F97316', button: '#10B981' },
+  { name: 'Red', bg: '#EF4444', button: '#6366F1' },
+];
 
 export default function BookingFormSection() {
-  const { user } = useAuth();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
-    title: 'Book Your Appointment',
-    description: 'Schedule your appointment with us today. We look forward to serving you!',
+    title: 'Agendar Consulta',
+    description: 'Cadastre-se com suas informações de contato e marque um horário para ser atendido.',
     backgroundColor: '#6366F1',
     buttonColor: '#10B981',
-    headerImage: '',
   });
 
-  const { data: bookingForm, isLoading } = useQuery({
+  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
+
+  const { data: existingForm, isLoading } = useQuery({
     queryKey: ['/api/booking-form'],
-  });
-
-  const { data: services } = useQuery({
-    queryKey: ['/api/services'],
   });
 
   const updateFormMutation = useMutation({
@@ -49,77 +49,64 @@ export default function BookingFormSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/booking-form'] });
       toast({
-        title: "Form updated",
-        description: "Your booking form has been successfully updated.",
+        title: "Formulário atualizado",
+        description: "Suas configurações foram salvas com sucesso.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update booking form",
+        title: "Erro",
+        description: error.message || "Falha ao atualizar formulário",
         variant: "destructive",
       });
     },
   });
 
   useEffect(() => {
-    if (bookingForm) {
+    if (existingForm && typeof existingForm === 'object') {
       setFormData({
-        title: bookingForm.title,
-        description: bookingForm.description,
-        backgroundColor: bookingForm.backgroundColor,
-        buttonColor: bookingForm.buttonColor,
-        headerImage: bookingForm.headerImage || '',
+        title: (existingForm as any).title || 'Agendar Consulta',
+        description: (existingForm as any).description || 'Cadastre-se com suas informações de contato e marque um horário para ser atendido.',
+        backgroundColor: (existingForm as any).backgroundColor || '#6366F1',
+        buttonColor: (existingForm as any).buttonColor || '#10B981',
       });
     }
-  }, [bookingForm]);
+  }, [existingForm]);
 
   const handleSave = () => {
     updateFormMutation.mutate(formData);
   };
 
-  const bookingUrl = `${window.location.origin}/book/${user?.id}`;
-
-  const handleCopyUrl = async () => {
-    try {
-      await copyToClipboard(bookingUrl);
-      toast({
-        title: "URL copied",
-        description: "Booking form URL has been copied to clipboard.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy URL to clipboard.",
-        variant: "destructive",
-      });
+  const handleShare = async (platform: string) => {
+    const url = `${window.location.origin}/book/${user?.id}`;
+    
+    if (platform === 'copy') {
+      try {
+        await copyToClipboard(url);
+        toast({
+          title: "Link copiado",
+          description: "O link do formulário foi copiado para a área de transferência.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Falha ao copiar o link.",
+          variant: "destructive",
+        });
+      }
+    } else if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+    } else if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`Agende sua consulta: ${url}`)}`, '_blank');
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // In a real app, you would upload this to a file storage service
-      // For now, we'll use a placeholder
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFormData(prev => ({ ...prev, headerImage: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const shareOnSocial = (platform: string) => {
-    const text = encodeURIComponent(`Book an appointment with ${user?.businessName || user?.name || 'us'}`);
-    const url = encodeURIComponent(bookingUrl);
-    
-    const shareUrls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-      whatsapp: `https://wa.me/?text=${text}%20${url}`,
-      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-    };
-    
-    window.open(shareUrls[platform as keyof typeof shareUrls], '_blank');
+  const applyColorPreset = (preset: typeof colorPresets[0]) => {
+    setFormData(prev => ({
+      ...prev,
+      backgroundColor: preset.bg,
+      buttonColor: preset.button,
+    }));
   };
 
   if (isLoading) {
@@ -132,219 +119,249 @@ export default function BookingFormSection() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form Customization */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customize Booking Form</CardTitle>
-            <p className="text-muted-foreground">Design your public booking form.</p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label className="text-sm font-medium text-foreground mb-2 block">
-                Header Image
-              </Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label htmlFor="image-upload" className="cursor-pointer">
-                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">Click to upload or drag and drop</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG up to 2MB</p>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="form-title">Form Title</Label>
-              <Input
-                id="form-title"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Book Your Appointment"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="form-description">Description</Label>
-              <Textarea
-                id="form-description"
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Schedule your appointment with us today..."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Background Color</Label>
-                <div className="flex items-center space-x-2 mt-2">
-                  <input
-                    type="color"
-                    value={formData.backgroundColor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                    className="w-12 h-10 border border-border rounded-lg cursor-pointer"
-                  />
-                  <Input
-                    value={formData.backgroundColor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                    placeholder="#6366F1"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Button Color</Label>
-                <div className="flex items-center space-x-2 mt-2">
-                  <input
-                    type="color"
-                    value={formData.buttonColor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, buttonColor: e.target.value }))}
-                    className="w-12 h-10 border border-border rounded-lg cursor-pointer"
-                  />
-                  <Input
-                    value={formData.buttonColor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, buttonColor: e.target.value }))}
-                    placeholder="#10B981"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleSave}
-              disabled={updateFormMutation.isPending}
-              className="w-full"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {updateFormMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Form Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Eye className="w-5 h-5" />
-              <span>Form Preview</span>
-            </CardTitle>
-            <p className="text-muted-foreground">
-              This is how your booking form will look.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div 
-              className="max-w-md mx-auto rounded-2xl p-6 text-white"
-              style={{ 
-                background: `linear-gradient(135deg, ${formData.backgroundColor}, ${formData.backgroundColor}80)` 
-              }}
-            >
-              {formData.headerImage && (
-                <img 
-                  src={formData.headerImage} 
-                  alt="Header" 
-                  className="w-full h-32 object-cover rounded-xl mb-4"
-                />
-              )}
-              
-              <h2 className="text-xl font-bold mb-2">{formData.title}</h2>
-              <p className="text-sm opacity-90 mb-6">{formData.description}</p>
-              
-              <div className="space-y-4">
-                <Input 
-                  placeholder="Full Name" 
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-                <Input 
-                  placeholder="Email Address" 
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-                <Input 
-                  placeholder="WhatsApp Number" 
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-                <select className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white">
-                  <option>Select Service</option>
-                  {services?.slice(0, 3).map((service: any) => (
-                    <option key={service.id} className="text-black">
-                      {service.name}
-                    </option>
-                  ))}
-                </select>
-                <Input 
-                  type="date" 
-                  className="bg-white/20 border-white/30 text-white"
-                />
-                <Input 
-                  type="time" 
-                  className="bg-white/20 border-white/30 text-white"
-                />
-                
-                <Button 
-                  className="w-full font-semibold py-3 transition-colors"
-                  style={{ backgroundColor: formData.buttonColor }}
-                >
-                  Book Appointment
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Share Links */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Share2 className="w-5 h-5" />
-            <span>Share Your Booking Form</span>
+            <Palette className="w-5 h-5" />
+            <span>Formulário de Agendamento</span>
+          </CardTitle>
+          <p className="text-muted-foreground">
+            Personalize seu formulário público de agendamento
+          </p>
+        </CardHeader>
+
+        <CardContent>
+          <Tabs defaultValue="customize" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="customize">Personalizar</TabsTrigger>
+              <TabsTrigger value="preview">Visualizar</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="customize" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título do Formulário</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Digite o título do formulário"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Digite a descrição do formulário"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label>Cores Predefinidas</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {colorPresets.map((preset) => (
+                        <button
+                          key={preset.name}
+                          onClick={() => applyColorPreset(preset)}
+                          className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: preset.bg }}
+                          />
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: preset.button }}
+                          />
+                          <span className="text-sm">{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="backgroundColor">Cor de Fundo</Label>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="backgroundColor"
+                          type="color"
+                          value={formData.backgroundColor}
+                          onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                          className="w-16 h-10 p-1 rounded"
+                        />
+                        <Input
+                          value={formData.backgroundColor}
+                          onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                          placeholder="#6366F1"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="buttonColor">Cor do Botão</Label>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="buttonColor"
+                          type="color"
+                          value={formData.buttonColor}
+                          onChange={(e) => setFormData(prev => ({ ...prev, buttonColor: e.target.value }))}
+                          className="w-16 h-10 p-1 rounded"
+                        />
+                        <Input
+                          value={formData.buttonColor}
+                          onChange={(e) => setFormData(prev => ({ ...prev, buttonColor: e.target.value }))}
+                          placeholder="#10B981"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleSave}
+                    disabled={updateFormMutation.isPending}
+                    className="w-full"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {updateFormMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                  </Button>
+                </div>
+
+                {/* Mini Preview */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Visualização Rápida</Label>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant={previewTheme === 'light' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setPreviewTheme('light')}
+                      >
+                        <Sun className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={previewTheme === 'dark' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setPreviewTheme('dark')}
+                      >
+                        <Moon className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`p-6 rounded-lg border-2 transition-all ${
+                      previewTheme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
+                    }`}
+                    style={{ 
+                      background: previewTheme === 'light' 
+                        ? `linear-gradient(135deg, ${formData.backgroundColor}22, ${formData.backgroundColor}11)`
+                        : `linear-gradient(135deg, ${formData.backgroundColor}33, ${formData.backgroundColor}22)`
+                    }}
+                  >
+                    <h3 className="text-xl font-bold mb-2">{formData.title}</h3>
+                    <p className="text-sm mb-4 opacity-80">{formData.description}</p>
+                    
+                    <div className="space-y-3">
+                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded opacity-50"></div>
+                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded opacity-50"></div>
+                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded opacity-50"></div>
+                      
+                      <button
+                        className="w-full py-2 px-4 rounded text-white font-medium"
+                        style={{ backgroundColor: formData.buttonColor }}
+                      >
+                        Agendar Consulta
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Visualização Completa</h3>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant={previewTheme === 'light' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPreviewTheme('light')}
+                  >
+                    <Sun className="w-4 h-4 mr-1" />
+                    Claro
+                  </Button>
+                  <Button
+                    variant={previewTheme === 'dark' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPreviewTheme('dark')}
+                  >
+                    <Moon className="w-4 h-4 mr-1" />
+                    Escuro
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="w-full max-w-md">
+                  <iframe
+                    src={`/book/${user?.id}?theme=${previewTheme}`}
+                    className="w-full h-96 border rounded-lg"
+                    title="Preview do Formulário"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Share className="w-5 h-5" />
+            <span>Compartilhe Seu Formulário de Agendamento</span>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-4">
-          <div>
-            <Label className="text-sm font-medium text-foreground mb-2 block">
-              Booking URL
-            </Label>
-            <div className="flex items-center space-x-2">
-              <Input 
-                value={bookingUrl} 
-                readOnly 
-                className="flex-1 bg-muted"
+          <div className="space-y-2">
+            <Label>URL de Agendamento</Label>
+            <div className="flex space-x-2">
+              <Input
+                value={`${window.location.origin}/book/${user?.id}`}
+                readOnly
+                className="flex-1"
               />
-              <Button onClick={handleCopyUrl} variant="outline">
+              <Button variant="outline" onClick={() => handleShare('copy')}>
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+
+          <div className="flex space-x-2">
             <Button 
-              onClick={() => shareOnSocial('facebook')}
-              className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700"
+              variant="outline" 
+              onClick={() => handleShare('facebook')}
+              className="flex-1"
             >
-              <Facebook className="w-4 h-4" />
-              <span>Share on Facebook</span>
+              <Facebook className="w-4 h-4 mr-2" />
+              Compartilhar no Facebook
             </Button>
             <Button 
-              onClick={() => shareOnSocial('whatsapp')}
-              className="flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600"
+              variant="outline" 
+              onClick={() => handleShare('whatsapp')}
+              className="flex-1"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Share on WhatsApp</span>
-            </Button>
-            <Button 
-              onClick={() => shareOnSocial('twitter')}
-              className="flex items-center justify-center space-x-2 bg-blue-400 hover:bg-blue-500"
-            >
-              <Twitter className="w-4 h-4" />
-              <span>Share on Twitter</span>
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Compartilhar no WhatsApp
             </Button>
           </div>
         </CardContent>

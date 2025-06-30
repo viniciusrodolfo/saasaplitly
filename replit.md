@@ -98,6 +98,15 @@ The platform is designed to scale from individual professionals to larger servic
 ```
 Changelog:
 - June 30, 2025. Initial setup
+- June 30, 2025. Migration completed from Replit Agent to Replit environment
+  - Fixed database initialization and table creation
+  - Resolved client modal data loading issue
+  - Implemented multi-language support (Portuguese/English)
+  - Enhanced booking form customization with theme preview
+  - Fixed date/time formatting issues
+  - Increased server payload limits
+  - Added comprehensive color customization options
+  - Resolved React component update warnings
 ```
 
 ## User Preferences

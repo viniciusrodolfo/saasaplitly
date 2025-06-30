@@ -94,6 +94,11 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
 
 export const insertAvailabilitySchema = createInsertSchema(availability).omit({
   id: true,
+}).extend({
+  morningStart: z.string().optional(),
+  morningEnd: z.string().optional(),
+  afternoonStart: z.string().optional(),
+  afternoonEnd: z.string().optional(),
 });
 
 export const insertBookingFormSchema = createInsertSchema(bookingForms).omit({

@@ -85,15 +85,17 @@ export default function ClientModal({ open, onOpenChange, client }: ClientModalP
   useEffect(() => {
     if (client) {
       setFormData({
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
+        name: client.name || '',
+        email: client.email || '',
+        phone: client.phone || '',
         whatsapp: client.whatsapp || '',
-        status: client.status,
+        status: client.status || 'active',
         notes: client.notes || '',
       });
+    } else {
+      resetForm();
     }
-  }, [client]);
+  }, [client, open]);
 
   const resetForm = () => {
     setFormData({

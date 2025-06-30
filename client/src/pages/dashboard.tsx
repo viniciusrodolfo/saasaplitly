@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
 import Sidebar from '@/components/layout/sidebar';
@@ -18,6 +18,12 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation('/login');
+    }
+  }, [user, isLoading, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -30,7 +36,6 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    setLocation('/login');
     return null;
   }
 

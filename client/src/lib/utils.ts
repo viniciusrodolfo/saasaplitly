@@ -6,41 +6,35 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+  return `$${amount.toFixed(2)}`;
 }
 
 export function formatDate(date: string): string {
-  return new Intl.DateFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(date));
+  const dateObj = new Date(date);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
 }
 
 export function formatTime(time: string): string {
-  const [hours, minutes] = time.split(':');
-  const date = new Date();
-  date.setHours(parseInt(hours), parseInt(minutes));
+  if (!time) return '';
   
-  return new Intl.DateFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date);
+  const [hours, minutes] = time.split(':');
+  const hourNum = parseInt(hours);
+  const minuteNum = parseInt(minutes);
+  
+  if (isNaN(hourNum) || isNaN(minuteNum)) return time;
+  
+  const period = hourNum >= 12 ? 'PM' : 'AM';
+  const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+  const displayMinute = minuteNum.toString().padStart(2, '0');
+  
+  return `${displayHour}:${displayMinute} ${period}`;
 }
 
 export function formatDateTime(date: string, time: string): string {
-  const dateTime = new Date(`${date}T${time}`);
-  return new Intl.DateFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(dateTime);
+  const formattedDate = formatDate(date);
+  const formattedTime = formatTime(time);
+  return `${formattedDate} at ${formattedTime}`;
 }
 
 export function getStatusColor(status: string): string {
