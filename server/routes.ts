@@ -378,14 +378,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/availability", requireAuth, async (req, res) => {
     try {
       const user = req.user as User;
+      console.log("Received availability data:", JSON.stringify(req.body, null, 2));
       const data = z.array(insertAvailabilitySchema).parse(req.body);
       const availabilities = data.map(item => ({ ...item, userId: user.id }));
       const result = await storage.updateAvailability(user.id, availabilities);
       res.json(result);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log("Validation error:", error.errors);
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
+      console.log("Error updating availability:", error);
       res.status(500).json({ message: "Error updating availability" });
     }
   });

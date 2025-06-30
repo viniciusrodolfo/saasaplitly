@@ -92,13 +92,13 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   createdAt: true,
 });
 
-export const insertAvailabilitySchema = createInsertSchema(availability).omit({
-  id: true,
-}).extend({
-  morningStart: z.string().optional(),
-  morningEnd: z.string().optional(),
-  afternoonStart: z.string().optional(),
-  afternoonEnd: z.string().optional(),
+export const insertAvailabilitySchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  isEnabled: z.boolean(),
+  morningStart: z.union([z.string(), z.null()]).optional(),
+  morningEnd: z.union([z.string(), z.null()]).optional(),
+  afternoonStart: z.union([z.string(), z.null()]).optional(),
+  afternoonEnd: z.union([z.string(), z.null()]).optional(),
 });
 
 export const insertBookingFormSchema = createInsertSchema(bookingForms).omit({

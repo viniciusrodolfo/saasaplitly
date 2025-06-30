@@ -43,11 +43,12 @@ export default function AvailabilitySection() {
       const formattedData = data.map(day => ({
         dayOfWeek: day.dayOfWeek,
         isEnabled: day.isEnabled,
-        morningStart: day.morningStart || null,
-        morningEnd: day.morningEnd || null,
-        afternoonStart: day.afternoonStart || null,
-        afternoonEnd: day.afternoonEnd || null,
+        morningStart: day.isEnabled && day.morningStart ? day.morningStart : null,
+        morningEnd: day.isEnabled && day.morningEnd ? day.morningEnd : null,
+        afternoonStart: day.isEnabled && day.afternoonStart ? day.afternoonStart : null,
+        afternoonEnd: day.isEnabled && day.afternoonEnd ? day.afternoonEnd : null,
       }));
+      console.log("Sending availability data:", formattedData);
       const response = await apiRequest('PUT', '/api/availability', formattedData);
       return response.json();
     },
