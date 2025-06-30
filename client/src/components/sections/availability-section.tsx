@@ -48,7 +48,6 @@ export default function AvailabilitySection() {
         afternoonStart: day.isEnabled && day.afternoonStart ? day.afternoonStart : null,
         afternoonEnd: day.isEnabled && day.afternoonEnd ? day.afternoonEnd : null,
       }));
-      console.log("Sending availability data:", formattedData);
       const response = await apiRequest('PUT', '/api/availability', formattedData);
       return response.json();
     },
@@ -89,7 +88,15 @@ export default function AvailabilitySection() {
             afternoonEnd: existing.afternoonEnd || '',
           };
         }
-        return day;
+        // If day doesn't exist in database, it should be disabled
+        return {
+          ...day,
+          isEnabled: false,
+          morningStart: '',
+          morningEnd: '',
+          afternoonStart: '',
+          afternoonEnd: '',
+        };
       }));
     }
   }, [existingAvailability]);
